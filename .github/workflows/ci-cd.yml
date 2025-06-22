@@ -18,24 +18,29 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: ./jenkins-to-github-demo/package-lock.json
         
     - name: Install dependencies
       run: npm ci
+      working-directory: ./jenkins-to-github-demo
       
     - name: Build application
       run: npm run build
+      working-directory: ./jenkins-to-github-demo
       
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: dist-files
-        path: dist/
+        path: ./jenkins-to-github-demo/dist/
         retention-days: 1
 
   test:
@@ -46,25 +51,29 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: ./jenkins-to-github-demo/package-lock.json
         
     - name: Install dependencies
       run: npm ci
       
     - name: Run unit tests
       run: npm test
+      working-directory: ./jenkins-to-github-demo
       
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-results
-        path: test-results.xml
+        path: ./jenkins-to-github-demo/test-results.xml
         retention-days: 30
         
     - name: Test Report
@@ -72,7 +81,7 @@ jobs:
       if: always()
       with:
         name: Unit Tests
-        path: test-results.xml
+        path: ./jenkins-to-github-demo/test-results.xml
         reporter: java-junit
 
   sonarqube:
@@ -84,6 +93,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
+        submodules: recursive
+      with:
         fetch-depth: 0  # Shallow clones should be disabled for better analysis
         
     - name: Setup Node.js
@@ -91,6 +102,7 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: ./jenkins-to-github-demo/package-lock.json
         
     - name: Install dependencies
       run: npm ci
@@ -113,6 +125,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -161,6 +175,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
       
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
@@ -189,7 +205,30 @@ jobs:
     if: failure()
     
     steps:
-    - name: Send failure notification
+    - name: Create failure issue
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Build Failed: ${context.workflow} - Run #${context.runNumber}`,
+            body: `## Build Failure Report
+            
+            **Workflow:** ${context.workflow}
+            **Run:** [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            **Branch:** ${context.ref}
+            **Commit:** ${context.sha}
+            **Actor:** @${context.actor}
+            
+            Please check the [workflow logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`,
+            labels: ['build-failure', 'automated']
+          })
+    
+    - name: Send failure notification (optional)
+      if: env.EMAIL_CONFIGURED == 'true'
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.gmail.com
@@ -205,5 +244,7 @@ jobs:
           Author: ${{ github.actor }}
           
           Check the logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        to: team@company.com
+        to: ${{ secrets.EMAIL_TO }}
         from: GitHub Actions
+      env:
+        EMAIL_CONFIGURED: ${{ secrets.EMAIL_USERNAME != '' && secrets.EMAIL_PASSWORD != '' && secrets.EMAIL_TO != '' }}
