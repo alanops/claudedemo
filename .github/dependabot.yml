@@ -1,0 +1,66 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/jenkins-to-github-demo"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    ignore:
+      # Ignore major version updates for these packages
+      - dependency-name: "jest"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group all npm development dependencies updates into a single PR
+      development-dependencies:
+        patterns:
+          - "*"
+        dependency-type: "development"
+      # Group all npm production dependencies updates into a single PR  
+      production-dependencies:
+        patterns:
+          - "*"
+        dependency-type: "production"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/jenkins-to-github-demo"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "your-github-username"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
