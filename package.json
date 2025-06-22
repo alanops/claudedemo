@@ -1,0 +1,18 @@
+{
+  "name": "myapp",
+  "version": "1.0.0",
+  "description": "Demo application for Jenkins to GitHub Actions migration",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Building application...' && mkdir -p dist && echo 'Build complete' > dist/app.js",
+    "test": "echo 'Running tests...' && echo '<testsuites><testsuite name=\"unit\" tests=\"5\" failures=\"0\"></testsuite></testsuites>' > test-results.xml && echo 'Tests passed!'",
+    "lint": "echo 'Linting code...'",
+    "start": "node dist/app.js"
+  },
+  "keywords": ["demo", "ci-cd"],
+  "author": "Demo Team",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
